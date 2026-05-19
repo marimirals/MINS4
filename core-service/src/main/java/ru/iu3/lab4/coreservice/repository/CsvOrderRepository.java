@@ -1,6 +1,7 @@
 package ru.iu3.lab4.coreservice.repository;
 
 import org.springframework.stereotype.Repository;
+import ru.iu3.lab4.coreservice.exception.StorageException;
 import ru.iu3.lab4.coreservice.model.Order;
 import ru.iu3.lab4.coreservice.model.OrderStatus;
 
@@ -92,10 +93,10 @@ public class CsvOrderRepository implements OrderRepository {
             order.setWeight(Double.parseDouble(parts[3].trim()));
             order.setStatus(OrderStatus.valueOf(parts[4].trim().toUpperCase()));
             switch (order.getStatus()) {
-                case NEW -> order.setState(new ru.iu3.lab1.transportcompany.state.NewOrderState());
-                case IN_PROGRESS -> order.setState(new ru.iu3.lab1.transportcompany.state.InProgressState());
-                case DELIVERED -> order.setState(new ru.iu3.lab1.transportcompany.state.DeliveredState());
-                case CANCELLED -> order.setState(new ru.iu3.lab1.transportcompany.state.CancelledState());
+                case NEW -> order.setState(new ru.iu3.lab4.coreservice.state.NewOrderState());
+                case IN_PROGRESS -> order.setState(new ru.iu3.lab4.coreservice.state.InProgressState());
+                case DELIVERED -> order.setState(new ru.iu3.lab4.coreservice.state.DeliveredState());
+                case CANCELLED -> order.setState(new ru.iu3.lab4.coreservice.state.CancelledState());
             }
             order.setVehicleId(parts[5].trim());
             order.setPrice(Double.parseDouble(parts[6].trim()));

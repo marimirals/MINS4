@@ -3,6 +3,8 @@ package ru.iu3.lab4.coreservice.service;
 import org.springframework.stereotype.Service;
 import ru.iu3.lab4.coreservice.exception.InvalidWeightException;
 import ru.iu3.lab4.coreservice.exception.OrderNotFoundException;
+import ru.iu3.lab4.coreservice.exception.ReferenceServiceUnavailableException;
+import ru.iu3.lab4.coreservice.grpc.ReferenceGrpcClient;
 import ru.iu3.lab4.coreservice.model.Order;
 import ru.iu3.lab4.coreservice.model.OrderStatus;
 import ru.iu3.lab4.coreservice.pricing.PricingStrategy;
@@ -22,16 +24,16 @@ import java.util.UUID;
 public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private PricingStrategy currentStrategy;
-    private final VehicleService vehicleService;
+    private final ReferenceGrpcClient referenceClient;
     private final OrderFileUpdateObserver fileUpdateObserver;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                             WeightBasedPricingStrategy defaultStrategy,
-                            VehicleService vehicleService,
+                            ReferenceGrpcClient referenceClient,
                             OrderFileUpdateObserver fileUpdateObserver) {
         this.orderRepository = orderRepository;
         this.currentStrategy = defaultStrategy;
-        this.vehicleService = vehicleService;
+        this.referenceClient = referenceClient;
         this.fileUpdateObserver = fileUpdateObserver;
     }
 
@@ -62,14 +64,16 @@ public class OrderServiceImpl implements OrderService {
 
         attachFileObserverIfMissing(order);
 
-        // Проверяем существование транспорта
-        vehicleService.getVehicleById(vehicleId);
+        // Вызов через gRPC с обработкой недоступности
+        try {
+            referenceClient.validateVehicleOrThrow(vehicleId);
+        } catch (ReferenceServiceUnavailableException e) {
+            // Не падаем, а пробрасываем понятное сообщение пользователю
+            throw new RuntimeException(e.getMessage());
+        }
 
-        // Проверяем через состояние, можно ли назначать транспорт
         if (!order.getState().canAssignVehicle()) {
-            throw new IllegalStateException(
-                    "Нельзя назначить транспорт на заказ в состоянии: " + order.getState().getName()
-            );
+            throw new IllegalStateException("Нельзя назначить транспорт в состоянии: " + order.getState().getName());
         }
 
         // Назначаем транспорт и переходим в следующее состояние

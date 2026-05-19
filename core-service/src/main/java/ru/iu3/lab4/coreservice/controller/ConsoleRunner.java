@@ -8,29 +8,29 @@ import ru.iu3.lab4.coreservice.model.OrderStatus;
 import ru.iu3.lab4.coreservice.observer.OrderObserver;
 import ru.iu3.lab4.coreservice.pricing.PriorityPricingStrategy;
 import ru.iu3.lab4.coreservice.pricing.WeightBasedPricingStrategy;
-import ru.iu3.lab4.coreservice.reporting.ReportMasterService;
 import ru.iu3.lab4.coreservice.service.OrderService;
-import ru.iu3.lab4.coreservice.service.VehicleService;
-import ru.iu3.lab4.grpc.VehicleReferenceServiceGrpc;
+import ru.iu3.lab4.coreservice.grpc.ReferenceGrpcClient;
+import org.springframework.context.annotation.Profile;
 
 import java.util.List;
 import java.util.Scanner;
 
 @Component
+@Profile("!test")
 public class ConsoleRunner implements CommandLineRunner {
     private final OrderService orderService;
-    private final VehicleReferenceServiceGrpc.VehicleReferenceServiceBlockingStub vehicleStub;
+    private final ReferenceGrpcClient referenceClient;
     private final Scanner scanner = new Scanner(System.in);
 
     private final WeightBasedPricingStrategy weightStrategy;
     private final PriorityPricingStrategy priorityStrategy;
 
     public ConsoleRunner(OrderService orderService,
-                         VehicleService vehicleService,
+                         ReferenceGrpcClient referenceClient,
                          WeightBasedPricingStrategy weightStrategy,
                          PriorityPricingStrategy priorityStrategy) {
         this.orderService = orderService;
-        this.vehicleService = vehicleService;
+        this.referenceClient = referenceClient;
         this.weightStrategy = weightStrategy;
         this.priorityStrategy = priorityStrategy;
     }
@@ -148,12 +148,14 @@ public class ConsoleRunner implements CommandLineRunner {
     private void showAllVehicles() {
         System.out.println("\nДоступный транспорт:");
         try {
-            vehicleService.getAllVehicles().forEach(v ->
-                    System.out.println(v.getId() + " - " + v.getType()));
-        } catch (TransportCompanyException e) {
-            System.out.println(e.getMessage());
+            var vehicles = referenceClient.getAllVehiclesSafe();
+            if (vehicles.isEmpty()) {
+                System.out.println("⚠Не удалось получить список транспорта (справочник недоступен)");
+                return;
+            }
+            vehicles.forEach(v -> System.out.println(v.id() + " - " + v.type()));
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Ошибка: " + e.getMessage());
         }
     }
 
