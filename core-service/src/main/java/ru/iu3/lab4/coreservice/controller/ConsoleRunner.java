@@ -39,9 +39,14 @@ public class ConsoleRunner implements CommandLineRunner {
     public void run(String... args) {
         System.out.println("=== Транспортная компания ===");
         while (true) {
-            printMenu();
-            int choice = getIntInput("Выбор: ");
-            if (!handleChoice(choice)) break;
+            org.slf4j.MDC.put("traceId", java.util.UUID.randomUUID().toString()); // Генерируем Trace ID
+            try {
+                printMenu();
+                int choice = getIntInput("Выбор: ");
+                if (!handleChoice(choice)) break;
+            } finally {
+                org.slf4j.MDC.remove("traceId"); // Очищаем после действия
+            }
         }
     }
 
@@ -104,10 +109,13 @@ public class ConsoleRunner implements CommandLineRunner {
         try {
             orderService.assignVehicle(orderId, vehicleId);
             System.out.println("Транспорт назначен");
+        } catch (ReferenceServiceUnavailableException e) {
+            // Graceful degradation: понятное сообщение без stacktrace
+            System.out.println(e.getMessage());
         } catch (TransportCompanyException e) {
             System.out.println(e.getMessage());
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            System.out.println("Неожиданная ошибка: " + e.getMessage());
         }
     }
 

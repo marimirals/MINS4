@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "ru.iu3.lab4.grpc";
+option java_outer_classname = "VehicleServiceProto";
+
+package vehicle;
+
+service VehicleReferenceService {
+
+  rpc ValidateVehicle (VehicleRequest) returns (VehicleExistsResponse);
+
+  rpc GetAllVehicles (GetAllRequest) returns (stream VehicleResponse);
+}
+
+message VehicleRequest {
+  string vehicle_id = 1;
+}
+
+message VehicleExistsResponse {
+  bool exists = 1;
+}
+
+message VehicleResponse {
+  string vehicle_id = 1;
+  string type = 2;
+}
+
+message GetAllRequest {}

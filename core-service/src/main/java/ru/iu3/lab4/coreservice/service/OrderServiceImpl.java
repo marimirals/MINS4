@@ -61,28 +61,18 @@ public class OrderServiceImpl implements OrderService {
     public void assignVehicle(String orderId, String vehicleId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException(orderId));
-
         attachFileObserverIfMissing(order);
 
-        // Вызов через gRPC с обработкой недоступности
-        try {
-            referenceClient.validateVehicleOrThrow(vehicleId);
-        } catch (ReferenceServiceUnavailableException e) {
-            // Не падаем, а пробрасываем понятное сообщение пользователю
-            throw new RuntimeException(e.getMessage());
-        }
+        referenceClient.validateVehicleOrThrow(vehicleId);
 
         if (!order.getState().canAssignVehicle()) {
             throw new IllegalStateException("Нельзя назначить транспорт в состоянии: " + order.getState().getName());
         }
 
-        // Назначаем транспорт и переходим в следующее состояние
         order.setVehicleId(vehicleId);
         order.getState().next(order);
-
         orderRepository.save(order);
     }
-
 
     @Override
     public void updateStatus(String orderId, OrderStatus status) {

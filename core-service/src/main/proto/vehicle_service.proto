@@ -7,9 +7,9 @@ option java_outer_classname = "VehicleServiceProto";
 package vehicle;
 
 service VehicleReferenceService {
-  // Проверка существования транспорта по ID
-  rpc ValidateVehicle (VehicleRequest) returns (VehicleResponse);
-  // Получить список всех доступных ТС (для отображения в консоли)
+
+  rpc ValidateVehicle (VehicleRequest) returns (VehicleExistsResponse);
+
   rpc GetAllVehicles (GetAllRequest) returns (stream VehicleResponse);
 }
 
@@ -17,10 +17,13 @@ message VehicleRequest {
   string vehicle_id = 1;
 }
 
+message VehicleExistsResponse {
+  bool exists = 1;
+}
+
 message VehicleResponse {
   string vehicle_id = 1;
   string type = 2;
-  bool exists = 3;
 }
 
 message GetAllRequest {}

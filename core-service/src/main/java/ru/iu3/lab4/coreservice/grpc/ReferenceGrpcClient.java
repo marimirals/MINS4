@@ -33,10 +33,14 @@ public class ReferenceGrpcClient {
             var response = stub.validateVehicle(request);
 
             if (!response.getExists()) {
-                throw new RuntimeException("Транспорт с ID '" + vehicleId + "' не найден в справочнике");
+                // ✅ Бросаем корректное исключение, которое поймает ConsoleRunner
+                throw new ru.iu3.lab4.coreservice.exception.ReferenceServiceUnavailableException(
+                        "Транспорт с ID '" + vehicleId + "' не найден в справочнике"
+                );
             }
 
-            return new VehicleDto(response.getVehicleId(), response.getType());
+            // ✅ Возвращаем только ID, тип не нужен для валидации
+            return new VehicleDto(vehicleId, null);
 
         } catch (StatusRuntimeException e) {
             if (e.getStatus().getCode() == io.grpc.Status.Code.UNAVAILABLE) {
@@ -45,7 +49,10 @@ public class ReferenceGrpcClient {
                         "Справочник транспорта временно недоступен. Попробуйте позже."
                 );
             }
-            log.error("gRPC error for vehicle {}: {}", vehicleId, e.getStatus(), e);
+            log.error("gRPC error for vehicle {}: {} - {}",
+                    vehicleId,
+                    e.getStatus().getCode(),
+                    e.getStatus().getDescription());
             throw new RuntimeException("Ошибка связи со справочником: " + e.getStatus().getDescription());
         }
     }
@@ -57,15 +64,27 @@ public class ReferenceGrpcClient {
         try {
             var request = GetAllRequest.newBuilder().build();
             var responses = stub.getAllVehicles(request);
+
             List<VehicleDto> result = new ArrayList<>();
+
             while (responses.hasNext()) {
                 var r = responses.next();
-                result.add(new VehicleDto(r.getVehicleId(), r.getType()));
+                result.add(new VehicleDto(
+                        r.getVehicleId(),
+                        r.getType()
+                ));
             }
+
             return result;
+
         } catch (StatusRuntimeException e) {
-            log.warn("Не удалось получить список транспорта: {}", e.getStatus());
-            return List.of(); // Возвращаем пустой список, а не падаем
+            log.warn("Не удалось получить список транспорта: {} - {}",
+                    e.getStatus().getCode(),
+                    e.getStatus().getDescription());
+
+            throw new ReferenceServiceUnavailableException(
+                    "Справочник транспорта временно недоступен. Попробуйте позже."
+            );
         }
     }
 }
